@@ -1,0 +1,30 @@
+object MainForm: TMainForm
+  Left = 171
+  Height = 125
+  Top = 228
+  Width = 632
+  Caption = 'MainForm'
+  ClientHeight = 125
+  ClientWidth = 632
+  OnCreate = FormCreate
+  LCLVersion = '1.3'
+  object Button1: TButton
+    Left = 266
+    Height = 25
+    Top = 84
+    Width = 75
+    Caption = 'Quit'
+    OnClick = Button1Click
+    TabOrder = 0
+  end
+  object Label1: TLabel
+    Left = 16
+    Height = 47
+    Top = 24
+    Width = 600
+    Alignment = taCenter
+    AutoSize = False
+    Caption = 'Waiting for some message from me... Try to run a other instance of the application.'
+    ParentColor = False
+  end
+end
