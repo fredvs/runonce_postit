@@ -20,13 +20,18 @@ type
   private
     {@VFD_HEAD_BEGIN: Tmainfrm}
     btnClose: TfpgButton;
+     btnStart: TfpgButton;
+     btnStop: TfpgButton;
     Label1: TfpgLabel;
 
     {@VFD_HEAD_END: Tmainfrm}
   public
-    procedure CatchMessage(Sender: TObject);
+    procedure CatchMessage;
     procedure AfterCreate; override;
     procedure btnCloseClick(Sender: TObject);
+    procedure btnStartClick(Sender: TObject);
+    procedure btnStopClick(Sender: TObject);
+    procedure onDestroyForm(Sender: TObject);
   end;
 
   {@VFD_NEWFORM_DECL}
@@ -36,17 +41,34 @@ type
 var
   mymessage: string;
 
+  procedure Tmainfrm.CatchMessage;
+  begin
+       label1.Text := TheMessage;                /// for fpGUI
+  end;
+
+  procedure Tmainfrm.onDestroyForm(Sender: TObject);
+  begin
+  FreeRunOnce;
+  end;
 
   procedure Tmainfrm.btnCloseClick(Sender: TObject);
   begin
-    Close;
+  Close;
+  end;
+
+   procedure Tmainfrm.btnStartClick(Sender: TObject);
+  begin
+     StartMessage(@CatchMessage, 1000);
+  end;
+
+  procedure Tmainfrm.btnStopClick(Sender: TObject);
+  begin
+    StopMessage;
   end;
 
   procedure Tmainfrm.AfterCreate;
   begin
     {%region 'Auto-generated GUI code' -fold}
-
-
 
     {@VFD_BODY_BEGIN: Tmainfrm}
     Name := 'mainfrm';
@@ -55,12 +77,41 @@ var
     Hint := '';
     WindowPosition := wpScreenCenter;
     BackgroundColor := clmoneygreen;
+    OnDestroy:= @onDestroyForm;
 
-    btnClose := TfpgButton.Create(self);
+    btnStart := TfpgButton.Create(self);
+    with btnStart do
+    begin
+      Name := 'btnStart';
+      SetPosition(50, 70, 150, 23);
+      Text := 'Enable Get Message';
+      Enabled := True;
+      FontDesc := '#Label1';
+      Hint := '';
+      ImageName := '';
+      TabOrder := 6;
+      onclick := @btnStartClick;
+    end;
+
+     btnStop := TfpgButton.Create(self);
+    with btnStop do
+    begin
+      Name := 'btnStop';
+      SetPosition(240, 70, 150, 23);
+      Text := 'Disable Get Message';
+      Enabled := True;
+      FontDesc := '#Label1';
+      Hint := '';
+      ImageName := '';
+      TabOrder := 6;
+      onclick := @btnStopClick;
+    end;
+
+     btnClose := TfpgButton.Create(self);
     with btnClose do
     begin
       Name := 'btnClose';
-      SetPosition(245, 70, 60, 23);
+      SetPosition(440, 70, 60, 23);
       Text := 'Close';
       Enabled := True;
       FontDesc := '#Label1';
@@ -78,7 +129,8 @@ var
       FontDesc := '#Label2';
       Hint := '';
       Text :=
-        'Waiting for some message from me... Try to load a other instance of the application.';
+        'Waiting for some message... Try to load a other instance of the application.';
+      Label1.Alignment:=taCenter;
     end;
 
 
@@ -87,21 +139,10 @@ var
 
     //////////////////////
 
-    InitMessage(self, @CatchMessage, 1000);
-
+   InitMessage  ;
+   StartMessage(@CatchMessage, 1000);
   end;
 
-  procedure Tmainfrm.CatchMessage(Sender: TObject);
-  begin
-    PostIt;
-    if TheMessage <> '' then
-     {$IF DEFINED(LCL)}
-      label1.Caption := TheMessage;            /// for lcl
-    {$else}
-    label1.Text := TheMessage;                /// for fpGUI
-   {$endif}
-
-  end;
 
   procedure MainProc;
   var

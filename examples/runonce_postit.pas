@@ -2,12 +2,12 @@
 RunOnce_PostIt allows your application to run only once.
 If you try to run it again, you may post a message to the first running application.
 
+It works for lcl, fpGUI, msei and console applications.
+
 RunOnce procedure is (a lot of) inspired by LSRunOnce of LazSolutions, created 
 by Silvio Clecio :  http://silvioprog.com.br 
 
-It works for lcl, fpGUI, msei and console applications.
-
-Fred van Stappen  
+Fred van Stappen
 fiens@hotmail.com
 *)
 
@@ -20,71 +20,141 @@ uses
   Windows, JwaTlHelp32,
 {$ENDIF}
    {$IF DEFINED(LCL)}
-    ExtCtrls,       /// for lcl timer
+  ExtCtrls,       /// for lcl timer
      {$else}
-   fpg_main, /// for fpgui timer
+  fpg_main, /// for fpgui timer
     {$endif}
   SysUtils, Classes, Process;
 
 type
-  TProc = procedure(AObject: TObject) of object;
+  TProc = procedure of object;
 
-function ExecProcess(const ACommandLine: string): string;
-procedure ListProcess(const AProcess: TStringList; const AShowPID: boolean = False;
-  const ASorted: boolean = True; const AIgnoreCurrent: boolean = False);
+type
+  TOncePost = class(TObject)
+  private
+    TheProc: TProc;
+{$IF DEFINED(LCL)}
+    ATimer: TTimer;         /// for lcl timer
+    procedure InitMessage(AOwner: TComponent);
+    {$else}
+    ATimer: Tfpgtimer;             /// for fpGUI
+    procedure InitMessage;
+   {$endif}
+    function ExecProcess(const ACommandLine: string): string;
+    procedure ListProcess(const AProcess: TStringList; const AShowPID: boolean = False;
+      const ASorted: boolean = True; const AIgnoreCurrent: boolean = False);
+    function PostIt: string;
+  const
+    CLSUtilsProcessNameValueSeparator: char = '=';
 
-const
-  CLSUtilsProcessNameValueSeparator: char = '=';
+    procedure onTimerPost(Sender: TObject);
+    procedure RunOnce(AMessage: string);
+
+  end;
 
 procedure RunOnce(AMessage: string);
-procedure InitMessage(AOwner: TComponent; AProc: Tproc;
-  const AInterval: integer = 1000);
-function PostIt: string;
+
+{$IF DEFINED(LCL)}
+procedure InitMessage(AOwner: TComponent);    /// LcL
+    {$else}
+procedure InitMessage;      /// fpgui
+   {$endif}
+
+procedure FreeRunOnce;
+procedure StopMessage;
+procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000);
 
 var
-  TheMessage: string;
+   TheOncePost: TOncePost;
+   TheMessage: string;
 
 implementation
 
-function PostIt: string;
+procedure RunOnce(AMessage: string);
+begin
+  TheOncePost := TOncePost.Create;
+  TheOncePost.RunOnce(AMessage);
+end;
+
+
+{$IF DEFINED(LCL)}
+  procedure InitMessage(AOwner: TComponent);
+begin
+   if assigned(TheOncePost.ATimer) = false then  TheOncePost.InitMessage(AOwner);
+end;
+    {$else}
+  procedure InitMessage ;         /// fpgui
+begin
+   if assigned(TheOncePost.ATimer) = false then  TheOncePost.InitMessage;
+end;
+   {$endif}
+
+
+procedure StopMessage;
+begin
+  if assigned(TheOncePost.ATimer) then
+   begin
+   TheOncePost.ATimer.Enabled:=false;
+   end;
+end;
+
+procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000);
+begin
+  TheOncePost.ATimer.Enabled := false;
+  TheOncePost.TheProc := AProc;
+ TheOncePost.ATimer.Interval := AInterval;
+ TheOncePost.ATimer.OnTimer := @TheOncePost.onTimerPost;
+ TheOncePost.ATimer.Enabled := True;
+end;
+
+procedure FreeRunOnce;
+begin
+   if assigned(TheOncePost.ATimer) then
+   begin
+   TheOncePost.ATimer.Enabled:=false;
+   TheOncePost.ATimer.Free;
+   end;
+  TheOncePost.Free;
+end;
+
+
+function TOncePost.PostIt: string;
 var
   f: textfile;
 begin
-  if fileexists('.postit.tmp') then
+  if fileexists(GetTempDir + '.postit.tmp') then
   begin
-    AssignFile(f, PChar('.postit.tmp'));
+    AssignFile(f, PChar(GetTempDir + '.postit.tmp'));
     Reset(F);
     Readln(F, TheMessage);
     CloseFile(f);
-    DeleteFile('.postit.tmp');
+    DeleteFile(GetTempDir + '.postit.tmp');
     Result := TheMessage;
   end;
 end;
 
-procedure InitMessage(AOwner: TComponent; AProc: Tproc;
-  const AInterval: integer = 1000);
-
-var
-{$IF DEFINED(LCL)}
-   ATimer: TTimer;         /// for lcl timer
-    {$else}
-   ATimer: Tfpgtimer;             /// for fpGUI
-   {$endif}
+procedure TOncePost.onTimerPost(Sender: TObject);
 begin
-  {$IF DEFINED(LCL)}
-   ATimer := TTimer.Create(AOwner);         /// for lcl timer
-    {$else}
-   ATimer := TfpgTimer.Create(1000);           /// for fpGUI
-   {$endif}
-
-  ATimer.Interval := AInterval;
-  ATimer.OnTimer := AProc;
-  ATimer.Enabled := True;
+  if PostIt <> '' then
+    if TheProc <> nil then
+      TheProc;
 end;
 
+{$IF DEFINED(LCL)}
+procedure TOncePost.InitMessage(AOwner: TComponent);
+begin
+   ATimer := TTimer.Create(AOwner);         /// for lcl timer
+   ATimer.Enabled := false;
+end;
+{$else}
+procedure TOncePost.InitMessage;
+begin
+   ATimer := TfpgTimer.Create(1000);           /// for fpGUI
+   ATimer.Enabled := false;
+ end;
+{$endif}
 
-
-function ExecProcess(const ACommandLine: string): string;
+function TOncePost.ExecProcess(const ACommandLine: string): string;
 const
   READ_BYTES = 2048;
 var
@@ -129,8 +199,8 @@ begin
   end;
 end;
 
-procedure ListProcess(const AProcess: TStringList; const AShowPID: boolean;
-  const ASorted: boolean; const AIgnoreCurrent: boolean);
+procedure TOncePost.ListProcess(const AProcess: TStringList;
+  const AShowPID: boolean; const ASorted: boolean; const AIgnoreCurrent: boolean);
 var
 {$IFDEF UNIX}
   I, J: integer;
@@ -182,7 +252,7 @@ begin
   AProcess.Sorted := ASorted;
 end;
 
-procedure RunOnce(AMessage: string);
+procedure TOncePost.RunOnce(AMessage: string);
 var
   VProcess: TStringList;
   x, y: integer;
@@ -200,7 +270,7 @@ begin
     begin
       if AMessage <> '' then
       begin
-        AssignFile(f, PChar('.postit.tmp'));
+        AssignFile(f, PChar(GetTempDir + '.postit.tmp'));
         rewrite(f);
         append(f);
         writeln(f, AMessage);
@@ -211,6 +281,15 @@ begin
     end;
     Inc(x);
   end;
+      if ParamStr(1) <> '' then
+     begin
+        AssignFile(f, PChar(GetTempDir + '.postit.tmp'));
+        rewrite(f);
+        append(f);
+        writeln(f,AMessage);
+        Flush(f);
+        CloseFile(f);
+      end;
   VProcess.Free;
 end;
 

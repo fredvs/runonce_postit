@@ -1,17 +1,18 @@
 object MainForm: TMainForm
-  Left = 171
+  Left = 152
   Height = 125
-  Top = 228
+  Top = 208
   Width = 632
   Caption = 'MainForm'
   ClientHeight = 125
   ClientWidth = 632
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   LCLVersion = '1.3'
   object Button1: TButton
-    Left = 266
+    Left = 484
     Height = 25
-    Top = 84
+    Top = 90
     Width = 75
     Caption = 'Quit'
     OnClick = Button1Click
@@ -26,5 +27,23 @@ object MainForm: TMainForm
     AutoSize = False
     Caption = 'Waiting for some message from me... Try to run a other instance of the application.'
     ParentColor = False
+  end
+  object Button2: TButton
+    Left = 84
+    Height = 25
+    Top = 90
+    Width = 169
+    Caption = 'Dont get message'
+    OnClick = Button2Click
+    TabOrder = 1
+  end
+  object Button3: TButton
+    Left = 276
+    Height = 25
+    Top = 90
+    Width = 169
+    Caption = 'Get message'
+    OnClick = Button3Click
+    TabOrder = 2
   end
 end
