@@ -50,7 +50,7 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="Demo_lcl"/>
+      <Filename Value="demo_lcl"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
