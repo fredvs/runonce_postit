@@ -1,0 +1,45 @@
+object mainfo: tmainfo
+  bounds_x = 343
+  bounds_y = 222
+  bounds_cx = 653
+  bounds_cy = 146
+  container.frame.localprops = []
+  container.frame.localprops1 = []
+  container.bounds = (
+    0
+    0
+    653
+    146
+  )
+  oncreated = aftercreated
+  ondestroy = onformdestroy
+  moduleclassname = 'tmainform'
+  object label1: tlabel
+    bounds_x = 72
+    bounds_y = 16
+    bounds_cx = 505
+    bounds_cy = 15
+    caption = 'Waiting for some message from me... Try to run a other instance of the application.'
+    reffontheight = 15
+  end
+  object tbutton1: tbutton
+    taborder = 1
+    bounds_x = 96
+    bounds_y = 72
+    bounds_cx = 162
+    bounds_cy = 21
+    state = [as_localcaption, as_localonexecute]
+    caption = 'Dont get message'
+    onexecute = dontgetmessage
+  end
+  object tbutton2: tbutton
+    taborder = 2
+    bounds_x = 360
+    bounds_y = 72
+    bounds_cx = 130
+    bounds_cy = 21
+    state = [as_localcaption, as_localonexecute]
+    caption = 'Get message'
+    onexecute = getmessage
+  end
+end
