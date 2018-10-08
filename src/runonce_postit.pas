@@ -13,28 +13,15 @@ fiens@hotmail.com
 
 unit RunOnce_PostIt;
 
-{.$DEFINE fpgui}    // uncomment if using fpgui
-{.$DEFINE mse}    // uncomment if using mse
+{$DEFINE fpgui}
 
 interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows, JwaTlHelp32,
+  JwaTlHelp32,
 {$ENDIF}
-
-{$IF DEFINED(LCL)}
-  ExtCtrls,       /// for lcl timer
-  {$endif}
-
- {$IF DEFINED(fpgui)}
-  fpg_main, /// for fpgui timer
-{$ENDIF}
-
-  {$IF DEFINED(mse)}
-  msetimer, /// for mse timer
-{$ENDIF}
-
+  fptimer,  
   SysUtils, Classes, Process;
 
 type
@@ -44,21 +31,7 @@ type
   TOncePost = class(TObject)
   private
     TheProc: TProc;
-{$IF DEFINED(LCL)}
-    ATimer: TTimer;         /// for lcl timer
-    procedure InitMessage(AOwner: TComponent);
-      {$endif}
-
-  {$IF DEFINED(fpgui)}
-    ATimer: Tfpgtimer;             /// for fpGUI
     procedure InitMessage;
-   {$endif}
-
-  {$IF DEFINED(mse)}
-    ATimer:  TTimer;             /// for fpGUI
-    procedure InitMessage;
-   {$endif}
-
     function ExecProcess(const ACommandLine: string): string;
     procedure ListProcess(const AProcess: TStringList; const AShowPID: boolean = False;
       const ASorted: boolean = True; const AIgnoreCurrent: boolean = False);
@@ -66,104 +39,72 @@ type
   const
     CLSUtilsProcessNameValueSeparator: char = '=';
 
-      {$IFDEF mse}
-  procedure onTimerPost(const sender: TObject);
-        {$else}
- procedure onTimerPost(Sender: TObject);
-          {$endif}
-
- procedure RunOnce(AMessage: string);
+    procedure onTimerPost(Sender: TObject);
+    function RunOnce(AMessage: string) : boolean;
+    function IsRunningIDE(AProcess : string) :boolean;
 
   end;
 
-procedure RunOnce(AMessage: string);
+function RunOnce(AMessage: string) : boolean; // if true the application is already loaded
 
-{$IF DEFINED(LCL)}
-procedure InitMessage(AOwner: TComponent);    /// LcL
-   {$endif}
-
-  {$IF DEFINED(fpgui)}
-procedure InitMessage;      /// fpgui
-   {$endif}
-
-   {$IF DEFINED(mse)}
- procedure InitMessage;      /// mse
-    {$endif}
-
+procedure InitMessage;     
+function IsRunningIDE(AProcess : string) :boolean;
 procedure FreeRunOnce;
 procedure StopMessage;
+procedure StartMessage(AProc: Tproc; const AInterval: integer = 500);
 
-   {$IFDEF mse}
- procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000000);
-      {$else}
-procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000);
-          {$endif}
 var
    TheOncePost: TOncePost;
    TheMessage: string;
+   ATimer: Tfptimer;
 
 implementation
 
-procedure RunOnce(AMessage: string);
+function RunOnce(AMessage: string): boolean; // if true the application is already loaded
+
 begin
   TheOncePost := TOncePost.Create;
-  TheOncePost.RunOnce(AMessage);
+result :=  TheOncePost.RunOnce(AMessage);
 end;
 
-
-{$IF DEFINED(LCL)}
-  procedure InitMessage(AOwner: TComponent);    // lcl
+function IsRunningIDE(AProcess : string) :boolean;
 begin
-   if assigned(TheOncePost.ATimer) = false then  TheOncePost.InitMessage(AOwner);
+  if assigned(TheOncePost) then
+ result := TheOncePost.IsRunningIDE(AProcess)
+else
+ result := true ;
 end;
-    {$endif}
 
-  {$IF DEFINED(fpgui)}
-  procedure InitMessage ;         /// fpgui
+  procedure InitMessage ;     
 begin
-   if assigned(TheOncePost.ATimer) = false then  TheOncePost.InitMessage;
+   if assigned(ATimer) = false then  TheOncePost.InitMessage;
 end;
-   {$endif}
-
-   {$IF DEFINED(mse)}
-    procedure InitMessage ;         /// mse
-  begin
-     if assigned(TheOncePost.ATimer) = false then  TheOncePost.InitMessage;
-  end;
-     {$endif}
-
-
+  
 procedure StopMessage;
 begin
-  if assigned(TheOncePost.ATimer) then
+  if assigned(ATimer) then
    begin
-   TheOncePost.ATimer.Enabled:=false;
+   ATimer.Enabled:=false;
    end;
 end;
 
-{$IFDEF mse}
-procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000000);
-  {$else}
-procedure StartMessage(AProc: Tproc; const AInterval: integer = 1000);
-  {$endif}
+procedure StartMessage(AProc: Tproc; const AInterval: integer = 500);
 begin
-  TheOncePost.ATimer.Enabled := false;
+  ATimer.Enabled := false;
   TheOncePost.TheProc := AProc;
- TheOncePost.ATimer.Interval := AInterval;
-
- TheOncePost.ATimer.OnTimer := @TheOncePost.onTimerPost;
-
- TheOncePost.ATimer.Enabled := True;
+ ATimer.Interval := AInterval;
+ ATimer.OnTimer := @TheOncePost.onTimerPost;
+ ATimer.Enabled := True;
 end;
 
 procedure FreeRunOnce;
 begin
-   if assigned(TheOncePost.ATimer) then
+   if assigned(ATimer) then
    begin
-   TheOncePost.ATimer.Enabled:=false;
-   TheOncePost.ATimer.Free;
+   ATimer.Enabled:=false;
+   ATimer.free;
    end;
-  TheOncePost.Free;
+ if assigned(TheOncePost) then TheOncePost.Free;
 end;
 
 
@@ -182,41 +123,22 @@ begin
   end;
 end;
 
-{$IFDEF mse}
-procedure TOncePost.onTimerPost(const sender: TObject);
-      {$else}
 procedure TOncePost.onTimerPost(Sender: TObject);
-        {$endif}
 begin
+  ATimer.Enabled:=false;
   if PostIt <> '' then
     if TheProc <> nil then
       TheProc;
+    ATimer.Enabled:=true;
+ 
 end;
 
-{$IF DEFINED(LCL)}
-procedure TOncePost.InitMessage(AOwner: TComponent);
-begin
-   ATimer := TTimer.Create(AOwner);         /// for lcl timer
-   ATimer.Enabled := false;
-end;
-{$endif}
-
- {$IF DEFINED(fpgui)}
 procedure TOncePost.InitMessage;
 begin
-   ATimer := TfpgTimer.Create(1000);           /// for fpGUI
+   ATimer := TfpTimer.Create(nil);   
    ATimer.Enabled := false;
  end;
-{$endif}
-
-{$IF DEFINED(mse)}
-procedure TOncePost.InitMessage;
-begin
-  ATimer := ttimer.Create(nil);         /// for mse
-  ATimer.Enabled := false;
- end;
-{$endif}
-
+ 
 function TOncePost.ExecProcess(const ACommandLine: string): string;
 const
   READ_BYTES = 2048;
@@ -237,6 +159,7 @@ begin
 {$WARN SYMBOL_DEPRECATED ON}
     VProcess.Options := [poUsePipes, poNoConsole];
     VProcess.Execute;
+    VProcess.Priority:=ppRealTime;
     while VProcess.Running do
     begin
       VMemoryStream.SetSize(VBytesRead + READ_BYTES);
@@ -277,20 +200,20 @@ begin
 {$IFDEF UNIX}
   VOldNameValueSeparator := AProcess.NameValueSeparator;
   AProcess.NameValueSeparator := CLSUtilsProcessNameValueSeparator;
-
-   {$IFDEF FREEBSD}
+ 
+  {$IFDEF FREEBSD}
      AProcess.Text := ExecProcess('sh -c "ps -A | awk ''{ print $5 "=" $1 }''"');
   {$ELSE}
      AProcess.Text := ExecProcess('sh -c "ps -A | awk ''{ print $4 "=" $1 }''"');
   {$ENDIF}
-
+  
   // debug
   // writeln('Application list ');
   // writeln('---------------------------------');
   // writeln(AProcess.Text);
   // writeln('---------------------------------');
-
-   J := AProcess.Count;
+    
+  J := AProcess.Count;
   for I := AProcess.Count downto 1 do
   begin
     if (I > J - 3) or (AIgnoreCurrent and
@@ -327,7 +250,8 @@ begin
   AProcess.Sorted := ASorted;
 end;
 
-procedure TOncePost.RunOnce(AMessage: string);
+function TOncePost.RunOnce(AMessage: string): boolean; // if true the application is already loaded
+
 var
   VProcess: TStringList;
   x, y: integer;
@@ -335,28 +259,39 @@ var
 begin
   x := 0;
   y := 0;
+  result := false;
   VProcess := TStringList.Create;
   ListProcess(VProcess, False, False, False);
-  while x < VProcess.Count do
+  while (x < VProcess.Count) and (result = false) do
   begin
     if pos(ApplicationName, VProcess.Strings[x]) > 0 then
       Inc(y);
     if y > 1 then
     begin
+    result := true;
+  
+  // debug
+  // writeln('Application name');
+  // writeln('---------------------------------');
+  // writeln(VProcess.Strings[x]);
+  // writeln('-----------------------------------');
+     
       if AMessage <> '' then
       begin
         AssignFile(f, PChar(GetTempDir + '.postit.tmp'));
         rewrite(f);
         append(f);
-        writeln(f, AMessage);
+        if Amessage = 'clear' then
+        writeln(f, 'close') else  writeln(f, AMessage) ;
         Flush(f);
         CloseFile(f);
       end;
-      Halt;
+     //   writeln('A other instance is running');
+     // Halt;
     end;
     Inc(x);
   end;
-      if ParamStr(1) <> '' then
+      if (ParamStr(1) <> '') and  (Amessage <> 'clear') then
      begin
         AssignFile(f, PChar(GetTempDir + '.postit.tmp'));
         rewrite(f);
@@ -365,6 +300,29 @@ begin
         Flush(f);
         CloseFile(f);
       end;
+  VProcess.Free;
+//  if result then else
+// writeln('A unique instance is running and it it this one') ;
+end;
+
+function TOncePost.IsRunningIDE(AProcess : string) :boolean;
+var
+  VProcess: TStringList;
+  x : integer;
+  
+  begin
+  x := 0;
+  result := false;
+  VProcess := TStringList.Create;
+  ListProcess(VProcess, False, False, False);
+  while (x < VProcess.Count) and (result = false) do
+  begin
+    if pos(AProcess, VProcess.Strings[x]) > 0 then
+     begin
+     result := true;
+     end;
+   inc(x);
+ end;
   VProcess.Free;
 end;
 
