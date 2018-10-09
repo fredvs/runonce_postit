@@ -6,6 +6,7 @@ It works for lcl, fpGUI, MSEgui and console applications.
 RunOnce procedure is (a lot of) inspired by LSRunOnce of LazSolutions, created 
 by Silvio Clecio :  http://silvioprog.com.br 
 
+
 Fred van Stappen  
 fiens@hotmail.com
 
